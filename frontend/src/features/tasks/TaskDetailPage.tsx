@@ -11,11 +11,13 @@ import {
   User,
   Clock,
   ChevronDown,
+  RefreshCw,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuthStore } from '../users/auth.store';
-import type { TaskStatus, Priority } from '../../types';
+import type { TaskStatus, Priority, Frequency } from '../../types';
 import { cn } from '../../lib/cn';
+import { api } from '../../lib/api';
 
 const statusLabels: Record<TaskStatus, string> = {
   TODO: 'До виконання',
@@ -37,6 +39,14 @@ const priorityLabels: Record<Priority, string> = {
   HIGH: 'Високий',
 };
 
+const frequencyLabels: Record<Frequency, string> = {
+  ONCE: 'Один раз',
+  DAILY: 'Щоденно',
+  WEEKLY: 'Щотижнево',
+  MONTHLY: 'Раз на місяць',
+  YEARLY: 'Раз на рік',
+};
+
 export function TaskDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -49,6 +59,12 @@ export function TaskDetailPage() {
     queryKey: ['task', id],
     queryFn: () => tasksApi.getById(id!),
     enabled: !!id,
+  });
+
+  const { data: usersData } = useQuery({
+    queryKey: ['users-assignees'],
+    queryFn: () =>
+      api.get<{ data: { id: string; name: string; role: string }[] }>('/users/assignees').then((r) => r.data),
   });
 
   const updateTask = useMutation({
@@ -145,8 +161,64 @@ export function TaskDetailPage() {
           {/* Assignee */}
           <div className="flex items-center gap-1 text-gray-600">
             <User size={14} />
-            {task.assignee?.name ?? 'Не призначено'}
+            {canEdit ? (
+              <select
+                value={task.assigneeId ?? ''}
+                onChange={(e) => updateTask.mutate({ assigneeId: e.target.value || null })}
+                className="text-sm border border-gray-200 rounded px-2 py-0.5"
+              >
+                <option value="">— Не призначено —</option>
+                {usersData?.data.map((u) => (
+                  <option key={u.id} value={u.id}>{u.name}</option>
+                ))}
+              </select>
+            ) : (
+              <span>{task.assignee?.name ?? 'Не призначено'}</span>
+            )}
           </div>
+
+          {/* Frequency */}
+          <div className="flex items-center gap-1 text-gray-600">
+            <RefreshCw size={14} />
+            {canEdit ? (
+              <select
+                value={task.frequency}
+                onChange={(e) => updateTask.mutate({ frequency: e.target.value as Frequency })}
+                className="text-sm border border-gray-200 rounded px-2 py-0.5"
+              >
+                {(Object.keys(frequencyLabels) as Frequency[]).map((f) => (
+                  <option key={f} value={f}>{frequencyLabels[f]}</option>
+                ))}
+              </select>
+            ) : (
+              <span>{frequencyLabels[task.frequency]}</span>
+            )}
+          </div>
+
+          {/* Repeat until — тільки якщо не ONCE */}
+          {task.frequency !== 'ONCE' && (
+            <div className="flex items-center gap-1 text-gray-600">
+              <Calendar size={14} />
+              <span className="text-xs text-gray-500">до:</span>
+              {canEdit ? (
+                <input
+                  type="date"
+                  defaultValue={task.repeatUntil ? task.repeatUntil.slice(0, 10) : ''}
+                  onBlur={(e) => {
+                    const val = e.target.value;
+                    updateTask.mutate({ repeatUntil: val ? new Date(val).toISOString() : null });
+                  }}
+                  className="text-sm border border-gray-200 rounded px-2 py-0.5"
+                />
+              ) : (
+                <span>
+                  {task.repeatUntil
+                    ? format(new Date(task.repeatUntil), 'd MMM yyyy', { locale: uk })
+                    : 'не вказано'}
+                </span>
+              )}
+            </div>
+          )}
 
           {/* Due date */}
           {task.dueDate && (

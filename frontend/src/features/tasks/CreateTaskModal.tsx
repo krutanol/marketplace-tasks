@@ -8,11 +8,21 @@ import type { User } from '../../types';
 import { X } from 'lucide-react';
 import { useState } from 'react';
 
+const frequencyLabels = {
+  ONCE: 'Один раз',
+  DAILY: 'Щоденно',
+  WEEKLY: 'Щотижнево',
+  MONTHLY: 'Раз на місяць',
+  YEARLY: 'Раз на рік',
+};
+
 const schema = z.object({
   title: z.string().min(1, 'Введіть назву'),
   description: z.string().optional(),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH']).default('MEDIUM'),
-  dueDate: z.string().optional(),   // значення з <input type="datetime-local"> — конвертуємо перед відправкою
+  frequency: z.enum(['ONCE', 'DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY']).default('ONCE'),
+  repeatUntil: z.string().optional(),
+  dueDate: z.string().optional(),
   assigneeId: z.string().optional(),
   articleMode: z.enum(['none', 'specific', 'all']).default('none'),
   articlesText: z.string().optional(),
@@ -38,6 +48,8 @@ export function CreateTaskModal({ onClose }: { onClose: () => void }) {
   } = useForm<FormData>({ resolver: zodResolver(schema) });
 
   const articleMode = watch('articleMode');
+  const frequency = watch('frequency');
+  const isRepeating = frequency !== 'ONCE';
 
   const mutation = useMutation({
     mutationFn: (data: FormData) => {
@@ -51,18 +63,19 @@ export function CreateTaskModal({ onClose }: { onClose: () => void }) {
           .filter(Boolean);
       }
 
-      // datetime-local повертає "2026-07-02T22:43" — додаємо секунди і Z для ISO 8601
-      let dueDateISO: string | undefined;
-      if (data.dueDate) {
-        const d = new Date(data.dueDate);
-        dueDateISO = isNaN(d.getTime()) ? undefined : d.toISOString();
-      }
+      const toISO = (val?: string) => {
+        if (!val) return undefined;
+        const d = new Date(val);
+        return isNaN(d.getTime()) ? undefined : d.toISOString();
+      };
 
       return tasksApi.create({
         title: data.title,
         description: data.description || undefined,
         priority: data.priority,
-        dueDate: dueDateISO,
+        frequency: data.frequency,
+        repeatUntil: isRepeating ? toISO(data.repeatUntil) : undefined,
+        dueDate: toISO(data.dueDate),
         assigneeId: data.assigneeId || undefined,
         articles,
       });
@@ -92,6 +105,7 @@ export function CreateTaskModal({ onClose }: { onClose: () => void }) {
         </div>
 
         <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="p-6 space-y-4">
+          {/* Назва */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Назва *</label>
             <input
@@ -101,6 +115,7 @@ export function CreateTaskModal({ onClose }: { onClose: () => void }) {
             {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title.message}</p>}
           </div>
 
+          {/* Опис */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Опис</label>
             <textarea
@@ -110,6 +125,7 @@ export function CreateTaskModal({ onClose }: { onClose: () => void }) {
             />
           </div>
 
+          {/* Пріоритет + Дедлайн */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Пріоритет</label>
@@ -132,6 +148,35 @@ export function CreateTaskModal({ onClose }: { onClose: () => void }) {
             </div>
           </div>
 
+          {/* Частота */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Частота</label>
+            <select
+              {...register('frequency')}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            >
+              {Object.entries(frequencyLabels).map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Дата закінчення повторень — тільки якщо не "Один раз" */}
+          {isRepeating && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Повторювати до *
+              </label>
+              <input
+                {...register('repeatUntil')}
+                type="date"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
+              <p className="text-xs text-gray-400 mt-1">Вкажіть дату закінчення повторень</p>
+            </div>
+          )}
+
+          {/* Виконавець */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Виконавець</label>
             <select
@@ -141,12 +186,13 @@ export function CreateTaskModal({ onClose }: { onClose: () => void }) {
               <option value="">— Не призначено —</option>
               {usersData?.data.map((u) => (
                 <option key={u.id} value={u.id}>
-                  {u.name} ({u.role})
+                  {u.name} ({roleLabel(u.role)})
                 </option>
               ))}
             </select>
           </div>
 
+          {/* Товари */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Товари</label>
             <select
@@ -167,7 +213,7 @@ export function CreateTaskModal({ onClose }: { onClose: () => void }) {
               <textarea
                 {...register('articlesText')}
                 rows={3}
-                placeholder="ART-001, ART-002&#10;ART-003"
+                placeholder={'ART-001, ART-002\nART-003'}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none font-mono"
               />
             </div>
@@ -195,4 +241,13 @@ export function CreateTaskModal({ onClose }: { onClose: () => void }) {
       </div>
     </div>
   );
+}
+
+function roleLabel(role: string) {
+  const map: Record<string, string> = {
+    ADMIN: 'Адмін',
+    MANAGER: 'Менеджер',
+    EXECUTOR: 'Виконавець',
+  };
+  return map[role] ?? role;
 }

@@ -25,6 +25,8 @@ export const tasksApi = {
     title: string;
     description?: string;
     priority?: string;
+    frequency?: string;
+    repeatUntil?: string;
     dueDate?: string;
     assigneeId?: string;
     articles?: string[] | 'ALL';
@@ -37,6 +39,8 @@ export const tasksApi = {
       description?: string | null;
       status?: string;
       priority?: string;
+      frequency?: string;
+      repeatUntil?: string | null;
       dueDate?: string | null;
       assigneeId?: string | null;
     }

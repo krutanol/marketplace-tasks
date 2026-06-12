@@ -1,9 +1,9 @@
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { useNavigate } from 'react-router-dom';
-import type { Task } from '../../types';
+import type { Task, Frequency } from '../../types';
 import { cn } from '../../lib/cn';
-import { Calendar, Package, CheckSquare } from 'lucide-react';
+import { Calendar, Package, CheckSquare, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
 import { uk } from 'date-fns/locale';
 
@@ -17,6 +17,14 @@ const priorityLabels = {
   LOW: 'Низький',
   MEDIUM: 'Середній',
   HIGH: 'Високий',
+};
+
+const frequencyLabels: Record<Frequency, string> = {
+  ONCE: '',
+  DAILY: 'Щодня',
+  WEEKLY: 'Щотижня',
+  MONTHLY: 'Щомісяця',
+  YEARLY: 'Щороку',
 };
 
 export function TaskCard({ task, isDragging = false }: { task: Task; isDragging?: boolean }) {
@@ -78,6 +86,12 @@ export function TaskCard({ task, isDragging = false }: { task: Task; isDragging?
           <span className="flex items-center gap-1">
             <CheckSquare size={12} />
             {doneSubtasks}/{totalSubtasks}
+          </span>
+        )}
+        {task.frequency && task.frequency !== 'ONCE' && (
+          <span className="flex items-center gap-1 text-blue-500">
+            <RefreshCw size={12} />
+            {frequencyLabels[task.frequency]}
           </span>
         )}
         {task.dueDate && (

@@ -100,6 +100,8 @@ export async function createTask(input: CreateTaskInput, creatorId: string) {
       title: input.title,
       description: input.description,
       priority: input.priority,
+      frequency: input.frequency,
+      repeatUntil: input.repeatUntil ? new Date(input.repeatUntil) : undefined,
       dueDate: input.dueDate ? new Date(input.dueDate) : undefined,
       assigneeId: input.assigneeId,
       creatorId,
@@ -138,6 +140,10 @@ export async function updateTask(id: string, input: UpdateTaskInput, userId: str
       ...(input.description !== undefined && { description: input.description }),
       ...(input.status !== undefined && { status: input.status }),
       ...(input.priority !== undefined && { priority: input.priority }),
+      ...(input.frequency !== undefined && { frequency: input.frequency }),
+      ...(input.repeatUntil !== undefined && {
+        repeatUntil: input.repeatUntil ? new Date(input.repeatUntil) : null,
+      }),
       ...(input.dueDate !== undefined && {
         dueDate: input.dueDate ? new Date(input.dueDate) : null,
       }),

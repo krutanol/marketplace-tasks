@@ -50,6 +50,8 @@ model Task {
   description String?
   status      String    @default("TODO")
   priority    String    @default("MEDIUM")
+  frequency   String    @default("ONCE")
+  repeatUntil DateTime?
   dueDate     DateTime?
   creatorId   String
   assigneeId  String?

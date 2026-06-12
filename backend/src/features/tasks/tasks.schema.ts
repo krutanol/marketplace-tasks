@@ -4,9 +4,10 @@ export const createTaskSchema = z.object({
   title: z.string().min(1).max(255),
   description: z.string().max(5000).optional(),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH']).default('MEDIUM'),
+  frequency: z.enum(['ONCE', 'DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY']).default('ONCE'),
+  repeatUntil: z.string().refine((v) => !isNaN(Date.parse(v)), { message: 'Невірний формат дати' }).optional(),
   dueDate: z.string().refine((v) => !isNaN(Date.parse(v)), { message: 'Невірний формат дати' }).optional(),
   assigneeId: z.string().uuid().optional(),
-  // Articles: array of article strings, or "ALL" to target all products
   articles: z
     .union([z.array(z.string().min(1)).min(1), z.literal('ALL')])
     .optional(),
@@ -17,6 +18,8 @@ export const updateTaskSchema = z.object({
   description: z.string().max(5000).optional().nullable(),
   status: z.enum(['TODO', 'IN_PROGRESS', 'DONE', 'CANCELLED']).optional(),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH']).optional(),
+  frequency: z.enum(['ONCE', 'DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY']).optional(),
+  repeatUntil: z.string().refine((v) => !isNaN(Date.parse(v)), { message: 'Невірний формат дати' }).optional().nullable(),
   dueDate: z.string().refine((v) => !isNaN(Date.parse(v)), { message: 'Невірний формат дати' }).optional().nullable(),
   assigneeId: z.string().uuid().optional().nullable(),
 });

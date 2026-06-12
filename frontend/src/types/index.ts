@@ -1,6 +1,7 @@
 export type Role = 'ADMIN' | 'MANAGER' | 'EXECUTOR';
 export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'DONE' | 'CANCELLED';
 export type Priority = 'LOW' | 'MEDIUM' | 'HIGH';
+export type Frequency = 'ONCE' | 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';
 export type SubtaskStatus = 'TODO' | 'IN_PROGRESS' | 'DONE';
 export type ArticleTaskStatus = 'PENDING' | 'IN_PROGRESS' | 'DONE' | 'CANCELLED';
 
@@ -55,6 +56,8 @@ export interface Task {
   description?: string;
   status: TaskStatus;
   priority: Priority;
+  frequency: Frequency;
+  repeatUntil?: string;
   dueDate?: string;
   creatorId: string;
   assigneeId?: string;
