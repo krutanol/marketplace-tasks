@@ -4,14 +4,20 @@ import { createAuditLog } from '../../utils/audit';
 import type { CreateTaskInput, UpdateTaskInput, ListTasksQuery } from './tasks.schema';
 import { getPaginationParams, buildPaginationMeta } from '../../utils/pagination';
 
-export async function listTasks(query: ListTasksQuery) {
+export async function listTasks(query: ListTasksQuery, requesterId: string, requesterRole: string) {
   const { page, limit, skip } = getPaginationParams(query);
 
   const where: Record<string, unknown> = {};
 
+  // Виконавець бачить тільки задачі де він є виконавцем
+  if (requesterRole === 'EXECUTOR') {
+    where.assigneeId = requesterId;
+  }
+
   if (query.status) where.status = query.status;
   if (query.priority) where.priority = query.priority;
-  if (query.assigneeId) where.assigneeId = query.assigneeId;
+  // Адмін/менеджер можуть фільтрувати по виконавцю, виконавець — ні (він вже обмежений)
+  if (query.assigneeId && requesterRole !== 'EXECUTOR') where.assigneeId = query.assigneeId;
 
   if (query.article) {
     where.taskArticles = {
@@ -48,7 +54,7 @@ export async function listTasks(query: ListTasksQuery) {
   return { data: tasks, meta: buildPaginationMeta(total, page, limit) };
 }
 
-export async function getTaskById(id: string) {
+export async function getTaskById(id: string, requesterId: string, requesterRole: string) {
   const task = await prisma.task.findUnique({
     where: { id },
     include: {
@@ -71,6 +77,12 @@ export async function getTaskById(id: string) {
   });
 
   if (!task) throw new AppError('Task not found', 404);
+
+  // Виконавець може бачити тільки свої задачі
+  if (requesterRole === 'EXECUTOR' && task.assigneeId !== requesterId) {
+    throw new AppError('Доступ заборонено', 403);
+  }
+
   return task;
 }
 
@@ -186,12 +198,21 @@ export async function deleteTask(id: string) {
   await prisma.task.delete({ where: { id } });
 }
 
-export async function getTasksByArticle(article: string) {
+export async function getTasksByArticle(article: string, requesterId: string, requesterRole: string) {
   const product = await prisma.product.findUnique({ where: { article } });
   if (!product) throw new AppError('Product not found', 404);
 
+  const where: Record<string, unknown> = {
+    taskArticles: { some: { productId: product.id } },
+  };
+
+  // Виконавець бачить тільки свої задачі
+  if (requesterRole === 'EXECUTOR') {
+    where.assigneeId = requesterId;
+  }
+
   const tasks = await prisma.task.findMany({
-    where: { taskArticles: { some: { productId: product.id } } },
+    where,
     include: {
       assignee: { select: { id: true, name: true } },
       taskArticles: {

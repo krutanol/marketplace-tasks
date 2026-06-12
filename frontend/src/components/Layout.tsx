@@ -26,7 +26,7 @@ export function Layout() {
         <nav className="flex-1 px-3 py-4 space-y-1">
           <NavItem to="/board" icon={<LayoutDashboard size={17} />} label="Дошка" />
           <NavItem to="/products" icon={<Package size={17} />} label="Товари" />
-          {user?.role === 'ADMIN' && (
+          {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
             <NavItem to="/users" icon={<Users size={17} />} label="Користувачі" />
           )}
         </nav>

@@ -25,7 +25,7 @@ tasksRouter.get(
   authenticate,
   validateQuery(listTasksQuerySchema),
   async (req: AuthenticatedRequest, res: Response) => {
-    const result = await listTasks(req.query as never);
+    const result = await listTasks(req.query as never, req.user!.id, req.user!.role);
     res.json(result);
   }
 );
@@ -35,14 +35,14 @@ tasksRouter.get(
   '/by-article/:article',
   authenticate,
   async (req: AuthenticatedRequest, res: Response) => {
-    const tasks = await getTasksByArticle(req.params.article);
+    const tasks = await getTasksByArticle(req.params.article, req.user!.id, req.user!.role);
     res.json({ data: tasks });
   }
 );
 
 // GET /api/tasks/:id
 tasksRouter.get('/:id', authenticate, async (req: AuthenticatedRequest, res: Response) => {
-  const task = await getTaskById(req.params.id);
+  const task = await getTaskById(req.params.id, req.user!.id, req.user!.role);
   res.json(task);
 });
 

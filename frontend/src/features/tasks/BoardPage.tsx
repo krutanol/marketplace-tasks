@@ -59,9 +59,12 @@ export function BoardPage() {
 
     const newStatus = over.id as TaskStatus;
     const task = tasks.find((t) => t.id === active.id);
-    if (task && task.status !== newStatus) {
-      updateStatus.mutate({ id: task.id, status: newStatus });
-    }
+    if (!task || task.status === newStatus) return;
+
+    // Виконавець може перетягувати тільки свої задачі
+    if (user?.role === 'EXECUTOR' && task.assigneeId !== user.id) return;
+
+    updateStatus.mutate({ id: task.id, status: newStatus });
   }
 
   if (isLoading) {

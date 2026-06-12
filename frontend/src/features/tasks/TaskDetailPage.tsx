@@ -77,6 +77,8 @@ export function TaskDetailPage() {
   if (!task) return <div className="p-8 text-red-500">Задачу не знайдено</div>;
 
   const canEdit = user?.role === 'ADMIN' || user?.role === 'MANAGER';
+  // Виконавець може змінювати тільки статус своїх задач
+  const canChangeStatus = canEdit || (user?.role === 'EXECUTOR' && task.assigneeId === user?.id);
 
   return (
     <div className="max-w-4xl mx-auto p-6">
@@ -129,15 +131,21 @@ export function TaskDetailPage() {
           {/* Status */}
           <div className="flex items-center gap-2">
             <span className="text-gray-500">Статус:</span>
-            <select
-              value={task.status}
-              onChange={(e) => updateTask.mutate({ status: e.target.value as TaskStatus })}
-              className={cn('px-2 py-0.5 rounded-full text-xs font-medium border-0 cursor-pointer', statusColors[task.status])}
-            >
-              {(Object.keys(statusLabels) as TaskStatus[]).map((s) => (
-                <option key={s} value={s}>{statusLabels[s]}</option>
-              ))}
-            </select>
+            {canChangeStatus ? (
+              <select
+                value={task.status}
+                onChange={(e) => updateTask.mutate({ status: e.target.value as TaskStatus })}
+                className={cn('px-2 py-0.5 rounded-full text-xs font-medium border-0 cursor-pointer', statusColors[task.status])}
+              >
+                {(Object.keys(statusLabels) as TaskStatus[]).map((s) => (
+                  <option key={s} value={s}>{statusLabels[s]}</option>
+                ))}
+              </select>
+            ) : (
+              <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium', statusColors[task.status])}>
+                {statusLabels[task.status]}
+              </span>
+            )}
           </div>
 
           {/* Priority */}
