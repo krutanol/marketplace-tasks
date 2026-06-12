@@ -1,0 +1,110 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Role values: ADMIN | MANAGER | EXECUTOR
+// TaskStatus values: TODO | IN_PROGRESS | DONE | CANCELLED
+// Priority values: LOW | MEDIUM | HIGH
+// SubtaskStatus values: TODO | IN_PROGRESS | DONE
+// ArticleTaskStatus values: PENDING | IN_PROGRESS | DONE | CANCELLED
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         String   @default("EXECUTOR")
+  apiKey       String?  @unique
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  assignedTasks    Task[]    @relation("TaskAssignee")
+  createdTasks     Task[]    @relation("TaskCreator")
+  assignedSubtasks Subtask[] @relation("SubtaskAssignee")
+  auditLogs        AuditLog[]
+
+  @@map("users")
+}
+
+model Product {
+  id        String   @id @default(uuid())
+  article   String   @unique
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  taskArticles TaskArticle[]
+
+  @@map("products")
+}
+
+model Task {
+  id          String    @id @default(uuid())
+  title       String
+  description String?
+  status      String    @default("TODO")
+  priority    String    @default("MEDIUM")
+  dueDate     DateTime?
+  creatorId   String
+  assigneeId  String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  creator      User          @relation("TaskCreator", fields: [creatorId], references: [id])
+  assignee     User?         @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  subtasks     Subtask[]
+  taskArticles TaskArticle[]
+  auditLogs    AuditLog[]
+
+  @@map("tasks")
+}
+
+model Subtask {
+  id         String   @id @default(uuid())
+  title      String
+  status     String   @default("TODO")
+  taskId     String
+  assigneeId String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  task     Task  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  assignee User? @relation("SubtaskAssignee", fields: [assigneeId], references: [id])
+
+  @@map("subtasks")
+}
+
+model TaskArticle {
+  id        String   @id @default(uuid())
+  taskId    String
+  productId String
+  status    String   @default("PENDING")
+  updatedAt DateTime @updatedAt
+
+  task    Task    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@unique([taskId, productId])
+  @@map("task_articles")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  taskId    String
+  userId    String
+  action    String
+  oldValue  String?
+  newValue  String?
+  createdAt DateTime @default(now())
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}
